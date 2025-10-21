@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* These styles are for the artist profile page */
+    .profile-header {
+        background: #2c3e50;
+        color: white;
+        padding: 60px 0;
+    }
+    .profile-container {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+    }
+    .profile-photo {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 5px solid #fff;
+    }
+    .profile-info h1 { font-size: 2.8em; margin: 0; }
+    .profile-info p { font-size: 1.2em; opacity: 0.9; }
+
+    .profile-main {
+        display: flex;
+        flex-wrap: wrap; /* Allows columns to stack on smaller screens */
+        gap: 30px;
+        margin-top: 40px;
+    }
+    .profile-left { flex: 2; min-width: 300px; }
+    .profile-right { flex: 1; min-width: 300px; }
+
+    .profile-section {
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+    }
+    .profile-section h2 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+    
+    .portfolio-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    .portfolio-item img { width: 100%; border-radius: 8px; }
+
+    .booking-card { text-align: center; }
+    .booking-card .price { font-size: 2em; font-weight: bold; color: #2c3e50; }
+    .btn-book {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        font-size: 1.1em;
+        margin-top: 15px;
+    }
+    .review-card {
+        border-bottom: 1px solid #eee;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+    .review-card:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    .review-stars {
+        color: #f39c12; /* Star color */
+        font-size: 1.2em;
+    }
+    .review-comment {
+        font-style: italic;
+        color: #555;
+    }
+    .review-author {
+        font-weight: bold;
+        color: #333;
+    }
+    .calendar { border-collapse: collapse; width: 100%; }
+    .calendar th, .calendar td { text-align: center; padding: 8px; border: 1px solid #ddd; }
+    .calendar th { background-color: #f2f2f2; }
+    .calendar .day-unavailable { background-color: #fbeaea; color: #e74c3c; text-decoration: line-through; }
+    .calendar .day-past { color: #ccc; }
+</style>
+
+<div class="profile-header">
+    <div class="container profile-container">
+        {% if artist.profile_photo %}
+            <img src="{{ artist.profile_photo.url }}" alt="{{ artist.contact_name }}" class="profile-photo">
+        {% else %}
+            <img src="https://ui-avatars.com/api/?name={{ artist.full_name|urlencode }}&size=200&background=random" alt="No photo" class="profile-photo">
+        {% endif %}
+        <div class="profile-info">
+            <h1>{{ artist.contact_name }}</h1>
+            <p>{{ artist.category }} from {{ artist.location }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="container profile-main">
+
+    <!-- LEFT COLUMN -->
+    <div class="profile-left">
+        <div class="profile-section">
+            <h2>About Me</h2>
+            <p>{{ artist.bio|linebreaks }}</p>
+        </div>
+        
+     <div class="profile-section">
+    <h2>Portfolio</h2>
+    {% if user.is_authenticated and user.role == 'ORGANIZER' %}
+        <div class="row">
+            {% for item in artist.portfolio.all %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+
+                        {% if item.file_type == 'IMAGE' and item.file %}
+                            <a href="{{ item.file.url }}" target="_blank" title="View full image">
+                                <img src="{{ item.file.url }}" alt="{{ item.title }}" class="img-fluid rounded">
+                            </a>
+
+                        {% elif item.file_type == 'VIDEO' and item.file %}
+                            <video controls class="w-100 rounded">
+                                <source src="{{ item.file.url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+
+                        {% elif item.file_type == 'AUDIO' and item.file %}
+                            <audio controls class="w-100 mt-2">
+                                <source src="{{ item.file.url }}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+
+                        {% elif item.url %}
+                            <a href="{{ item.url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                {{ item.title }} (View Link)
+                            </a>
+                        {% endif %}
+
+                    </div>
+                    <div class="card-footer text-muted text-center">
+                        {{ item.title }}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="col-12 text-center">This artist hasn't uploaded any portfolio items yet.</p>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center p-4 border rounded bg-light">
+            <h3>🔒 This Content is for Organizers Only</h3>
+            <p>To view this artist's full portfolio, please log in or create a free organizer account.</p>
+            <a href="{% url 'account_login' %}" class="btn btn-primary mt-2">Login or Register to View</a>
+        </div>
+    {% endif %}
+</div>
+
+         {% if artist.is_group and group_members %}
+              <h2>Meet the Members</h2>
+              <div class="members-container" style="display:flex; flex-wrap:wrap; gap:20px; margin-top:20px;">
+                  {% for member in group_members %}
+                       <div class="member-card" style="text-align:center; width:150px;">
+                         {% if member.photo %}
+                             <img src="{{ member.photo.url }}" alt="{{ member.name }}" 
+                              style="width:120px; height:120px; border-radius:50%; object-fit:cover;">
+                        {% else %}
+                              <img src="{% static 'img/default-profile.png' %}" alt="No photo" 
+                                 style="width:120px; height:120px; border-radius:50%; object-fit:cover;">
+                          {% endif %}
+                         <p><strong>{{ member.name }}</strong></p>
+                           <p style="font-size:0.9em; color:gray;">{{ member.role }}</p>
+                 </div>
+                 {% endfor %}
+           </div>
+         {% endif %}
+
+        <div class="profile-section">
+            <h2>Reviews</h2>
+            {% for review in reviews %}
+                <div class="review-card">
+                    <div class="review-stars">
+                        {% for i in "x"|rjust:review.rating %}⭐{% endfor %}
+                    </div>
+                    <p class="review-comment mt-2">"{{ review.comment }}"</p>
+                    <footer class="blockquote-footer">
+                        <span class="review-author">{{ review.organizer.full_name }}</span> 
+                        on {{ review.created_at|date:"F d, Y" }}
+                    </footer>
+                </div>
+            {% empty %}
+                <p>This artist has not received any reviews yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="profile-right">
+        <div class="profile-section booking-card">
+            <h2>Booking</h2>
+            <p>Starts From</p>
+            <div class="price">₹{{ artist.pricing_per_event }}</div>
+            <p>per event</p>
+            
+            {% if user.is_authenticated and user.role == 'ORGANIZER' %}
+                <form action="{% url 'toggle_favorite' artist.pk %}" method="post" style="margin-bottom: 10px;">
+                    {% csrf_token %}
+                    {% if artist in user.organizerprofile.get_favorite_artists %}
+                        <button type="submit" class="btn btn-warning w-100">★ Remove from Favorites</button>
+                    {% else %}
+                        <button type="submit" class="btn btn-outline-warning w-100">☆ Add to Favorites</button>
+                    {% endif %}
+                </form>
+                <a href="{% url 'start_conversation' artist.pk %}" class="btn btn-secondary btn-book mt-2">Message Artist</a>
+                
+                <a href="{% url 'create_booking' artist.pk %}" class="btn btn-primary btn-book">Request to Book</a>
+                {% else %}
+        <!-- Restrict booking for non-organizers -->
+        <a href="{% url 'account_login' %}" class="btn btn-primary">
+            Login as Organizer to Book
+        </a>
+    {% endif %}
+        </div>
+
+        <div class="profile-section">
+            <h2>Availability for {{ current_month_name }}</h2>
+            {% if user.is_authenticated and user.role == 'ORGANIZER' %}
+                <table class="calendar">
+                    <thead>
+                        <tr>
+                            <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in month_days %}
+                        <tr>
+                            {% for day in week %}
+                                {% if day in unavailable_dates %}
+                                    <td class="day-unavailable">{{ day.day }}</td>
+                                {% elif day < today %}
+                                    <td class="day-past">{{ day.day }}</td>
+                                {% else %}
+                                    <td>{{ day.day }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="mt-3"><small><span style="background-color:#fbeaea;">■</span> = Unavailable/Booked</small></p>
+            {% else %}
+                <p>Please log in as an organizer to view the artist's availability calendar.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
