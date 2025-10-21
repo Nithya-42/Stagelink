@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section id="artists" class="team" style="padding-top: 100px;">
+  <div class="container" data-aos="fade-up">
+
+    <header class="section-header">
+      <h2>Our Talent</h2>
+      <p>Browse and Discover Artists</p>
+    </header>
+
+    <div class="row gy-4">
+      {% for artist in artists %}
+      <div class="col-lg-3 col-md-6 d-flex align-items-stretch" data-aos="fade-up" data-aos-delay="100">
+        <div class="member">
+          <div class="member-img">
+            {% if artist.profile_photo %}
+              <img src="{{ artist.profile_photo.url }}" class="img-fluid" alt="{{ artist.full_name }}">
+            {% else %}
+              <img src="{% static 'assets/img/team/team-1.jpg' %}" class="img-fluid" alt="Default photo"> {% endif %}
+          </div>
+          <div class="member-info">
+            <h4>{{ artist.full_name }}</h4>
+            <span>{{ artist.category }}</span>
+            <p>Location: {{ artist.location }}</p>
+            </div>
+        </div>
+      </div>
+      {% empty %}
+        <p>No artists have been approved yet. Please check back later.</p>
+      {% endfor %}
+    </div>
+
+  </div>
+</section>
+{% endblock %}
